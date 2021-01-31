@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Scanner;
 
 import org.junit.Assert;
-import org.tbee.tesla.TeslaAPI;
 import org.tbee.tesla.dto.ChargeState;
 import org.tbee.tesla.dto.ClimateState;
 import org.tbee.tesla.dto.DriveState;
@@ -55,6 +54,7 @@ public class TestHappyFlow {
 		Assert.assertNotNull(tokens.accessToken);
 		Assert.assertNotNull(tokens.refreshToken);
 		System.out.println("Access token: " + tokens.accessToken);
+if (1==1) return;		 // TBEERNOT
 		
 		// get vehicles
 		System.out.println("getVehicles");
