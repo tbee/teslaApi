@@ -80,7 +80,6 @@ class TeslaNoMFALogic {
         	// construct URL making sure any encoding is done right
         	// https://auth.tesla.com/oauth2/v3/authorize?client_id=... 
     		String codeVerifier = TeslaMFALogic.generateCodeVerifier();
-            String codeChallenge = TeslaMFALogic.computeChallenge(codeVerifier);
         	HttpUrl url = new HttpUrl.Builder() // TBEERNOT
         		    .scheme("https")
         		    .host("auth.tesla.com")
@@ -201,7 +200,7 @@ class TeslaNoMFALogic {
 	    requestJsonObject.addProperty("client_id", "teslaweb");
 	    requestJsonObject.addProperty("code_verifier", codeVerifier);
 	    requestJsonObject.addProperty("code", authorizationCode);
-	    requestJsonObject.addProperty("redirect_uri", "https://auth.tesla.com/void/callback");
+	    requestJsonObject.addProperty("redirect_uri", "https://www.tesla.com/nl_NL/openid-connect/generic");
 	    
 	    // post the form
 	    Request request = new Request.Builder()
@@ -239,7 +238,7 @@ class TeslaNoMFALogic {
 		    JsonObject requestJsonObject = new JsonObject();
 		    requestJsonObject.addProperty("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer");
 		    requestJsonObject.addProperty("client_id", CLIENT_ID);
-		    requestJsonObject.addProperty("client_secret", CLIENT_SECRET);
+//		    requestJsonObject.addProperty("client_secret", CLIENT_SECRET);
 		    
 		    // post the form
 		    Request request = new Request.Builder()
@@ -248,6 +247,9 @@ class TeslaNoMFALogic {
 		            .post(RequestBody.create(gson.toJson(requestJsonObject), JsonMediaType))
 		            .build();
 			try (
+				//
+				// This is not working and returns a 401 "unsupported SSO app"
+				///
 				Response response = okHttpClient.newCall(request).execute();
 				ResponseBody responseBody = response.body();
 			) {
