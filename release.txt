@@ -1,0 +1,9 @@
+SNAPSHOT: 
+- mvn clean deploy
+  If the version ends with -SNAPSHOT it will go to the sonatype snapshot repo.
+  If the version does not end with -SNAPSHOT it will go the maven.org
+  However, you need to do manual versioning, better is.
+
+RELEASE:
+- mvn release:prepare
+- mvn release:perform
