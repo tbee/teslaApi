@@ -89,11 +89,12 @@ class TeslaMFALogic {
         	// https://auth.tesla.com/oauth2/v3/authorize?client_id=... 
     		String codeVerifier = generateCodeVerifier();
             String codeChallenge = computeChallenge(codeVerifier);
+            // https://auth.tesla.com/oauth2/v1/authorize?client_id=teslaweb&response_type=code&scope=openid%20email%20profile&redirect_uri=https%3A//www.tesla.com/nl_NL/openid-connect/generic&state=iOqmsqCj55z-GDSdyFoH6Fhx3C19jPvN0Q39yjjO0xw&locale=nl-NL
         	HttpUrl url = new HttpUrl.Builder()
         		    .scheme("https")
         		    .host("auth.tesla.com")
         		    .addPathSegment("oauth2")
-        		    .addPathSegment("v3")
+        		    .addPathSegment("v1")
         		    .addPathSegment("authorize")
         		    .addQueryParameter("client_id", "ownerapi")
         		    .addQueryParameter("code_challenge", codeChallenge)
@@ -460,7 +461,7 @@ class TeslaMFALogic {
 			    .scheme("https")
 			    .host("auth.tesla.com")
 			    .addPathSegment("oauth2")
-			    .addPathSegment("v3")
+			    .addPathSegment("v1")
 			    .addPathSegment("token")
 			    .build();
 
