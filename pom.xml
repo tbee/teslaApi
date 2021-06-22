@@ -159,7 +159,7 @@
 				<configuration>
 					<inceptionYear>2020</inceptionYear>
 					<organizationName>Tom Eugelink</organizationName>
-					<projectName>TeslaAPI</projectName>
+					<projectName>${project.artifactId}</projectName>
 					<licenseName>apache_v2</licenseName>
 				</configuration>
 				<executions>
