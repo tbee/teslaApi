@@ -213,7 +213,7 @@
 				<executions>
 					<execution>
 						<id>sign-artifacts</id>
-						<phase>deploy</phase> <!-- see if this works instead of verify -->
+						<phase>deploy</phase>
 						<goals>
 							<goal>sign</goal>
 						</goals>
