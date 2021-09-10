@@ -122,7 +122,8 @@ public class TeslaAPI {
 				    logger.warn("{}{} {}", logPrefix, response, response.peekBody(10000).string());
 			    }
 			    else {
-				    logger.trace("{}{} {}", logPrefix, response, response.peekBody(10000).string());			    	
+			    	// TBEERNOT logger.trace("{}{} {}", logPrefix, response, response.peekBody(10000).string());			    	
+				    logger.trace("{}{} {}", logPrefix, response, response.peekBody(200).string());			    	
 			    }
 			    return response;
 			})

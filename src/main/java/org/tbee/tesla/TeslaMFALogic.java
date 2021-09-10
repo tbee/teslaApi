@@ -90,26 +90,40 @@ class TeslaMFALogic {
     		String codeVerifier = generateCodeVerifier();
             String codeChallenge = computeChallenge(codeVerifier);
             // https://auth.tesla.com/oauth2/v1/authorize?client_id=teslaweb&response_type=code&scope=openid%20email%20profile&redirect_uri=https%3A//www.tesla.com/nl_NL/openid-connect/generic&state=iOqmsqCj55z-GDSdyFoH6Fhx3C19jPvN0Q39yjjO0xw&locale=nl-NL
+//        	HttpUrl url = new HttpUrl.Builder()
+//        		    .scheme("https")
+//        		    .host("auth.tesla.com")
+//        		    .addPathSegment("oauth2")
+//        		    .addPathSegment("v1")
+//        		    .addPathSegment("authorize")
+//        		    .addQueryParameter("client_id", "ownerapi")
+//        		    .addQueryParameter("code_challenge", codeChallenge)
+//        		    .addQueryParameter("code_challenge_method", "S256")
+//        		    .addQueryParameter("redirect_uri", "https://auth.tesla.com/void/callback")
+//        		    .addQueryParameter("response_type", "code")
+//        		    .addQueryParameter("scope", "openid email offline_access")
+//        		    .addQueryParameter("state", "TeslaTasks")
+//        		    .build();
+    		// https://auth.tesla.com//oauth2/v1/authorize?client_id=teslaweb&response_type=code&scope=openid email profile&redirect_uri=https://www.tesla.com/nl_NL/openid-connect/generic&state=Mdhhp1E5e3nIpj4bjq1EPCtebWlph10b2ZOwPvEq8jI&locale=nl-NL
         	HttpUrl url = new HttpUrl.Builder()
         		    .scheme("https")
         		    .host("auth.tesla.com")
         		    .addPathSegment("oauth2")
         		    .addPathSegment("v1")
         		    .addPathSegment("authorize")
-        		    .addQueryParameter("client_id", "ownerapi")
-        		    .addQueryParameter("code_challenge", codeChallenge)
-        		    .addQueryParameter("code_challenge_method", "S256")
-        		    .addQueryParameter("redirect_uri", "https://auth.tesla.com/void/callback")
+        		    .addQueryParameter("client_id", "teslaweb")
         		    .addQueryParameter("response_type", "code")
-        		    .addQueryParameter("scope", "openid email offline_access")
-        		    .addQueryParameter("state", "TeslaTasks")
+        		    .addQueryParameter("scope", "openid email profile")
+        		    .addQueryParameter("redirect_uri", "https://www.tesla.com/nl_NL/openid-connect/generic")
+        		    .addQueryParameter("state", "Mdhhp1E5e3nIpj4bjq1EPCtebWlph10b2ZOwPvEq8jI")    		    
+        		    .addQueryParameter("locale", "nl-NL")
         		    .build();
         	
         	// This is Tesla's MFA process
-			Map<String, String> loginHiddenFields = processMFALoginPage(url);
+			Map<String, String> loginHiddenFields = requestLoginPage(url);
 			String transactionId = loginHiddenFields.get("transaction_id");
 			attemptMFALogin(username, password, url, loginHiddenFields);
-			List<String> factorIds = obtainMFAFactorIds(transactionId);
+			List<String> factorIds = obtainMFAFactorIds(transactionId, url);
 			verifyMFAPasscode(passcode, url, transactionId, factorIds);
 			String authorizationCode = obtainMFAAuthorizationCode(url, transactionId);
 			Tokens oauthTokens = obtainMFAOAuthTokens(codeVerifier, url, authorizationCode);
@@ -126,7 +140,7 @@ class TeslaMFALogic {
 	}
 
 	/* */
-	private Map<String, String> processMFALoginPage(HttpUrl authorizeURL) throws IOException {
+	private Map<String, String> requestLoginPage(HttpUrl authorizeURL) throws IOException {
 		Request request = new Request.Builder()
 	            .url(authorizeURL)
 	            .get()
@@ -188,24 +202,42 @@ class TeslaMFALogic {
 	}
 
 	/* */
-	private List<String> obtainMFAFactorIds(String transactionId) throws IOException {
+	private List<String> obtainMFAFactorIds(String transactionId, HttpUrl authorizeURL) throws IOException {
 
 		// construct URL making sure any encoding is done right
-		// https://auth.tesla.com/oauth2/v3/authorize?client_id=... 
+		// https://auth.tesla.com//oauth2/v1/authorize/mfa/factors?transaction_id=9EYDgZpp
 		HttpUrl url = new HttpUrl.Builder()
 			    .scheme("https")
 			    .host("auth.tesla.com")
 			    .addPathSegment("oauth2")
-			    .addPathSegment("v3")
+			    .addPathSegment("v1")
 			    .addPathSegment("authorize")
 			    .addPathSegment("mfa")
 			    .addPathSegment("factors")
 			    .addQueryParameter("transaction_id", transactionId)
 			    .build();
 
-	    // post the form
+	    // do a get
 	    Request request = new Request.Builder()
+	    		.get()
 	            .url(url)
+//	            .addHeader("Accept", "application/json") // TBEERNOT added but is it needed?
+//	            .addHeader("Accept-Encoding", "gzip, deflate, br")
+//	            .addHeader("Accept-Language", "en-US,en;q=0.5")
+//	            .addHeader("Connection", "keep-alive")
+//	            .addHeader("Content-Type", "application/json;charset=UTF-8")
+//	            .addHeader("Cookie", "_ga_KFP8T9JWYJ=GS1.1.1626536715.2.0.1626536726.0; _ga=GA1.2.839819551.1620560363; _abck=9FA9EEF1E8E6513E3DDA553019C710E0~-1~YAAQHcITAlL8Aq96AQAA3l0ltQZlFN63XcZ0HG+dLpRps973YEUZMwtoN+Anl9tKSdN3gcLTYVyng3mAg3M8Noz5kmSrQZYkG7/C7x9zRwk4gGyJ8hrnSsyJEKauh11LARAK3C8nzcWnqmbtFlmhc7Zw7mjmqidCipzACqxFyzZXd/1Ds3iVi00xK3iEP4O02LVLCx3lUqIlB/JDE1Kfnv7h3qwLjhVt+xuEyg7uSEqGxjLipRb7PFpcjraXz7HFxp3IS+4pkeCOLGmYtIKDsOHEM+ZUPhd9ZYLG9NWtnSe3yzo6P6laDqzpINU+s/S8hLF6rG+42OWqnMne3yv6S78pMunm3xIZetEJtXaj3G2As80cfogRpDOiyiSIbgBip/IFQN3jJeXOQr5ypWQ8GX0/d5nT0NRI~-1~-1~-1; AKA_A2=A; ak_bmsc=9E7749D6A5185D7EAA979D96C83692A0~000000000000000000000000000000~YAAQNqQFF0yjT7F6AQAAV5MktQw0lixmz1JcR6eMJaYZN4utnQ6q7x1CAiLOCX/yZhbVsRCFZokda3lSRxkYS1mDivtlDhJBxBjF9DsQxJ13V8tXDUav7ilaE2BRSzEKaoLuU0kI+KtJl62DjI7dHGPoRXmtR35zSor9wKSEKAb2PJ45iWMmL2jcu8EMvpeGUyWcqrTUSPSNy90etsDmjMFTjU6bgkNRObkgWxeYEV8ybm19HnKl2IGysEeP9jld4VJCp7WmWOcL2O0e2EC5Kl0XlIOyTe/h9aFdBdvj2X8eNmeOzTMkvYOwafFmwu4eRWi7Xh/+j/b+gT/PUkTKDahgBpFJT7biuYEOUAmatNQPcMnIaXDT6lZ3RGTEpKwfpXlLPvkWGsDh; bm_sv=BBD18A6E04C4DAE99A9D1154B974F6DD~aGgGGMQ61CswR0Qpf4eiQKJwfhEWH+e6oO2EkD4mzGlG6oVJqehZU76xaRYQpY0AJa4vyrnQ/zYaj/xdZ1n80paOCV29EQfo/FASeLd3t2Rqdb9DhJ8MdvqI5eussbD2gfwQ6GeZSlyhfWfabPBJlPQ0thFPsL/JYoAxjYYpgLg=; _gid=GA1.2.530076769.1626536717; _gat_UA-9152935-1=1; BIGipServer~DMZ_WWW_PRD~ORIGIN-DMZ-WWW-HTTP=!FIjCfZ8OhbZlwxnLbEUvKAM67PUg5W8hrBQfw8et2UwQR1x5+rNDsc/Pvlcac06SXP8YqGmWqk2yQg==; tesla-auth.sid=s%3A2ZNM0sFfZueX1R13GImgcT1FdQYkDcYD.9V5ZESmzkZgv358oyYoeQbPfIOXMIc3Y72%2BZR8XlKW4; bm_sz=DD892A4A5FC43B3A3545BE342B889F1D~YAAQNqQFF86jT7F6AQAA4tAktQzvyXDOXaSFgykqQWMSJIpC3AAxhKYy1kSdEoglsbYQoQLEbtFLDEHZGDZmjZ/W2EIK3MBac8O/UYIHUY8ccu0UEGaZUZkGx5zHVKS9kqjohiJEsjN/TZc8UHn/b4FUR27+qcCALklWha4whqbR6cGXVogNwPLVlTRZR53Z8K7g0cMpfGyxRofJwIC86jgpLZtDxRAK8JcpYMO+GjJRLQ5cUGSaHIRHrYeUMLmWHi6D3mzj1eNhUg9eF5ZZ+4vkrWE0KNVbbENLWZoux30KCQ==~4407600~3224376; i18next=nl-NL")
+//	            .addHeader("Host", "auth.tesla.com")
+//	            .addHeader("Referer", "https://auth.tesla.com/oauth2/v1/authorize?client_id=teslaweb&response_type=code&scope=openid%20email%20profile&redirect_uri=https%3A//www.tesla.com/nl_NL/openid-connect/generic&state=_s_SyUcJhBemqhkP0BLJzU9BrXi8RoKRy8lhM3bkyLE&locale=nl-NL")
+//	            .addHeader("Sec-Fetch-Dest", "empty")
+//	            .addHeader("Sec-Fetch-Mode", "cors")
+//	            .addHeader("Sec-Fetch-Site", "same-origin")
+//	            .addHeader("TE", "trailers")
+//	            .addHeader("User-Agent", "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:90.0) Gecko/20100101 Firefox/90.0")
+//	            .addHeader("X-Requested-With","XMLHttpRequest" )
+	            
+	            //.addHeader("referer", authorizeURL.toString()) // TBEERNOT added but is it needed?
+	            //.addHeader("x-requested-with", "XMLHttpRequest") // TBEERNOT added but is it needed?
 	            .build();
 		try (
 			Response response = okHttpClient.newCall(request).execute();
@@ -233,12 +265,12 @@ class TeslaMFALogic {
 	throws IOException {
 		
 		// construct URL making sure any encoding is done right
-		// https://auth.tesla.com/oauth2/v3/authorize?client_id=... 
+		// https://auth.tesla.com//oauth2/v1/authorize/mfa/verify 
 		HttpUrl url = new HttpUrl.Builder()
 			    .scheme("https")
 			    .host("auth.tesla.com")
 			    .addPathSegment("oauth2")
-			    .addPathSegment("v3")
+			    .addPathSegment("v1")
 			    .addPathSegment("authorize")
 			    .addPathSegment("mfa")
 			    .addPathSegment("verify")
