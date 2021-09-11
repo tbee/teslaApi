@@ -163,6 +163,7 @@ class TeslaMFALogic {
 					loginHiddenFields.put(name, value);
 				}
 	        }
+			logger.trace("{}hidden fields: {}", logPrefix, loginHiddenFields);
 			return loginHiddenFields;
 		}
 	}
