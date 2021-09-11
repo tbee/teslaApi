@@ -80,7 +80,7 @@ class TeslaNoMFALogic {
         	// construct URL making sure any encoding is done right
         	// https://auth.tesla.com/oauth2/v3/authorize?client_id=... 
     		String codeVerifier = TeslaMFALogic.generateCodeVerifier();
-        	HttpUrl url = new HttpUrl.Builder() // TBEERNOT
+        	HttpUrl authorizeUrl = new HttpUrl.Builder() 
         		    .scheme("https")
         		    .host("auth.tesla.com")
         		    .addPathSegment("oauth2")
@@ -94,9 +94,9 @@ class TeslaNoMFALogic {
         		    .build();
         	
         	// This is Tesla's MFA process
-			Map<String, String> loginHiddenFields = processMFALoginPage(url);
-			String authorizationCode = attemptMFALogin(username, password, url, loginHiddenFields);
-			Tokens oauthTokens = obtainMFAOAuthTokens(codeVerifier, url, authorizationCode);
+			Map<String, String> loginHiddenFields = processMFALoginPage(authorizeUrl);
+			String authorizationCode = attemptMFALogin(username, password, authorizeUrl, loginHiddenFields);
+			Tokens oauthTokens = obtainMFAOAuthTokens(codeVerifier, authorizationCode);
 			Tokens apiTokens = obtainAPITokensUsingMFA(oauthTokens.accessToken);
 			
 			// we need to oauthToken to do the refresh of the api accesstoken
@@ -184,7 +184,7 @@ class TeslaNoMFALogic {
 	}
 
 	/* */
-	private Tokens obtainMFAOAuthTokens(String codeVerifier, HttpUrl authorizeURL, String authorizationCode) throws IOException {
+	private Tokens obtainMFAOAuthTokens(String codeVerifier, String authorizationCode) throws IOException {
 		// url to fetch token from
 		HttpUrl url = new HttpUrl.Builder()
 			    .scheme("https")

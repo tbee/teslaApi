@@ -41,12 +41,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
-import kong.unirest.Config;
-import kong.unirest.HttpRequest;
-import kong.unirest.HttpRequestSummary;
-import kong.unirest.HttpResponse;
-import kong.unirest.Interceptor;
-import kong.unirest.Unirest;
 import okhttp3.FormBody;
 import okhttp3.HttpUrl;
 import okhttp3.MediaType;
@@ -91,11 +85,10 @@ class TeslaMFALogic {
 	Tokens login(String username, String password, String passcode) {
         
         try {
-        	// construct URL making sure any encoding is done right
-        	// https://auth.tesla.com/oauth2/v3/authorize?client_id=... 
+        	// construct the login page URL (it is used 3 times)
     		String codeVerifier = generateCodeVerifier();
             String codeChallenge = computeChallenge(codeVerifier);
-        	HttpUrl url = new HttpUrl.Builder()
+        	HttpUrl authorizeUrl = new HttpUrl.Builder()
         		    .scheme("https")
         		    .host("auth.tesla.com")
         		    .addPathSegment("oauth2")
@@ -111,39 +104,16 @@ class TeslaMFALogic {
         		    .addQueryParameter("audience", "https://ownership.tesla.com/")
         		    .addQueryParameter("locale", "nl-NL")
         		    .build();	
-//        	https://auth.tesla.com/oauth2/v1/authorize?redirect_uri=https://www.tesla.com/teslaaccount/owner-xp/auth/callback&response_type=code&client_id=ownership&scope=offline_access%20openid%20ou_code%20email&audience=https%3A%2F%2Fownership.tesla.com%2F&locale=nl-nl        	
-        	
-        	Unirest.config()
-		        .socketTimeout(500)
-		        .connectTimeout(1000)
-		        .concurrency(10, 5)
-		        //.proxy(new Proxy("https://proxy"))
-		        .setDefaultHeader("Accept", "application/json")
-		        .followRedirects(true)
-		        .enableCookieManagement(true)
-		        .interceptor(new Interceptor() {
-		            public void onRequest(HttpRequest<?> request, Config config) {
-//		            	Optional<Body> body = request.getBody();
-//		            	if (body.isPresent()) {
-//		            		System.out.println(">> " + body.get());
-//		            	}
-		            }
-
-		            public void onResponse(HttpResponse<?> response, HttpRequestSummary request, Config config) {
-		            	System.out.println(">>>>\n" + request.asString() + "\n>>>>>");
-		            	System.out.println("<<<<\n" + response.getBody() + "\n<<<<");
-		            }
-		        });
-        	
+        	// https://auth.tesla.com/oauth2/v1/authorize?redirect_uri=https://www.tesla.com/teslaaccount/owner-xp/auth/callback&response_type=code&client_id=ownership&scope=offline_access%20openid%20ou_code%20email&audience=https%3A%2F%2Fownership.tesla.com%2F&locale=nl-nl        	
+        	        	
         	// This is Tesla's MFA process
-			Map<String, String> loginHiddenFields = requestLoginPage(url);
+			Map<String, String> loginHiddenFields = requestLoginPage(authorizeUrl);
 			String transactionId = loginHiddenFields.get("transaction_id");
-			attemptMFALogin(username, password, url, loginHiddenFields);
-			List<String> factorIds = obtainMFAFactorIds(transactionId, url);
-if (1<2) System.exit(0);			
-			verifyMFAPasscode(passcode, url, transactionId, factorIds);
-			String authorizationCode = obtainMFAAuthorizationCode(url, transactionId);
-			Tokens oauthTokens = obtainMFAOAuthTokens(codeVerifier, url, authorizationCode);
+			attemptMFALogin(username, password, authorizeUrl, loginHiddenFields);
+			List<String> factorIds = obtainMFAFactorIds(transactionId);
+			verifyMFAPasscode(passcode, transactionId, factorIds);
+			String authorizationCode = obtainMFAAuthorizationCode(authorizeUrl, transactionId);
+			Tokens oauthTokens = obtainMFAOAuthTokens(codeVerifier, authorizationCode);
 			Tokens apiTokens = obtainAPITokensUsingMFA(oauthTokens.accessToken);
 			
 			// we need to oauthToken to do the refresh of the api accesstoken
@@ -170,24 +140,6 @@ if (1<2) System.exit(0);
 			failIfNotSuccesful(response);
 			String content = responseBody.string();
 			
-			
-			
-//		{
-//            GetRequest getRequest = Unirest.get("https://auth.tesla.com/oauth2/v1/authorize")            	
-//    	            .queryString("client_id", "ownership")
-//    	            .queryString("response_type", "code")
-//    	            .queryString("scope", "offline_access openid ou_code email")
-//        		    .queryString("redirect_uri", "https://www.tesla.com/teslaaccount/owner-xp/auth/callback")
-//        		    .queryString("audience", "https://ownership.tesla.com/")
-//    	            .queryString("state", "Mdhhp1E5e3nIpj4bjq1EPCtebWlph10b2ZOwPvEq8jI")    		    
-//    	            .queryString("locale", "nl-NL");
-//			HttpResponse<String> response = getRequest.asString();
-//			failIfNotSuccesful(response);
-//			String content = response.getBody();
-
-			
-			
-			
 			// find all hidden inputs
 			Map<String, String> loginHiddenFields = new HashMap<>();
 			Pattern inputNamePattern = Pattern.compile("name=\"([^\"]+)");
@@ -206,7 +158,7 @@ if (1<2) System.exit(0);
 	            
 	            // remember
 				logger.trace("{}hidden field: {}={}", logPrefix, name, value);
-				// some fields are used twice, we need the first one
+				// The two sets overlap so we can just collect them all, but one field has different values and we need the first one
 				if (!loginHiddenFields.containsKey(name)) {
 					loginHiddenFields.put(name, value);
 				}
@@ -238,30 +190,10 @@ if (1<2) System.exit(0);
 		) {
 			failIfNotSuccesful(response);
 		}	
-		
-		
-		
-//        MultipartBody request = Unirest.post("https://auth.tesla.com/oauth2/v1/authorize")            	
-//	            .queryString("client_id", "ownership")
-//	            .queryString("response_type", "code")
-//	            .queryString("scope", "offline_access openid ou_code email")
-//	            .queryString("redirect_uri", "https://www.tesla.com/teslaaccount/owner-xp/auth/callback")
-//	            .queryString("audience", "https://ownership.tesla.com/")
-//	            .queryString("state", "Mdhhp1E5e3nIpj4bjq1EPCtebWlph10b2ZOwPvEq8jI")    		    
-//	            .queryString("locale", "nl-NL")
-//				.field("identity", username)
-//				.field("credential", password);
-//	            ;	            
-////loginHiddenFields.put("_phase", "authenticate");
-//	    for (Map.Entry<String, String> hiddenField : loginHiddenFields.entrySet()) {
-//	    	request.field(hiddenField.getKey(), hiddenField.getValue());
-//		}
-//	    HttpResponse<Void> response = request.asEmpty();
-//	    failIfNotSuccesful(response);
 	}
 
 	/* */
-	private List<String> obtainMFAFactorIds(String transactionId, HttpUrl authorizeURL) throws IOException {
+	private List<String> obtainMFAFactorIds(String transactionId) throws IOException {
 
 		// construct URL making sure any encoding is done right
 		// https://auth.tesla.com//oauth2/v1/authorize/mfa/factors?transaction_id=9EYDgZpp
@@ -284,13 +216,14 @@ if (1<2) System.exit(0);
 		try (
 			Response response = okHttpClient.newCall(request).execute();
 			ResponseBody responseBody = response.body();
-		) {
+		) {			
+			// get the content as JSON
 			failIfNotSuccesful(response);
-			String content = responseBody.string();
-			
+			String content = responseBody.string();			
 			JsonObject responseJsonObject = gson.fromJson(content, JsonObject.class);
 			failOnError(responseJsonObject);
 		
+			// Extract the factor ids
 			List<String> factorIds = new ArrayList<>();
 			JsonArray jsonArray = responseJsonObject.getAsJsonArray("data");
 			for (int i = 0; i < jsonArray.size(); i++) { 
@@ -299,28 +232,11 @@ if (1<2) System.exit(0);
 				factorIds.add(factorId);
 			}
 			return factorIds;
-			
-			
-//		{
-//            GetRequest getRequest = Unirest.get("https://auth.tesla.com/oauth2/v1/authorize/mfa/factors")
-//    	            .queryString("transaction_id", "transactionId");
-//			HttpResponse<JsonNode> response = getRequest.asJson();
-//			failIfNotSuccesful(response);
-//			JsonNode jsonNode = response.getBody();			
-//					
-//			List<String> factorIds = new ArrayList<>();
-//			JSONArray jsonArray = jsonNode.getArray();
-//			for (int i = 0; i < jsonArray.length(); i++) { 
-//				String factorId = jsonArray.getJSONObject(i).getString("id");
-//				logger.trace("{}factorId={}", logPrefix, factorId);
-//				factorIds.add(factorId);
-//			}
-//			return factorIds;
 		}	
 	}
 
 	/* */
-	private void verifyMFAPasscode(String passcode, HttpUrl authorizeURL, String transactionId, List<String> factorIds)
+	private void verifyMFAPasscode(String passcode, String transactionId, List<String> factorIds)
 	throws IOException {
 		
 		// construct URL making sure any encoding is done right
@@ -409,7 +325,7 @@ if (1<2) System.exit(0);
 	}
 
 	/* */
-	private Tokens obtainMFAOAuthTokens(String codeVerifier, HttpUrl authorizeURL, String authorizationCode) throws IOException {
+	private Tokens obtainMFAOAuthTokens(String codeVerifier, String authorizationCode) throws IOException {
 		// url to fetch token from
 		HttpUrl url = new HttpUrl.Builder()
 			    .scheme("https")
@@ -489,11 +405,6 @@ if (1<2) System.exit(0);
 	static void failIfNotSuccesful(Response response) {
 		if (!response.isSuccessful()) {
 			throw new RuntimeException("Request not succesful: "  + response);
-		}
-	}
-	static void failIfNotSuccesful(kong.unirest.HttpResponse response) {
-		if (response.getStatus() != 200) {
-			throw new RuntimeException("Request not succesful: "  + response.getStatus() + " "  + response.getStatusText());
 		}
 	}
 
