@@ -116,14 +116,14 @@ public class TeslaAPI {
 	                request.newBuilder().build().body().writeTo(buffer); // create a copy request and use that to write the body
 	                requestBodyContent = buffer.readUtf8();
 	        	}
-			    logger.trace("{}{} {} {}", logPrefix, request, request.headers(), requestBodyContent);
+			    logger.trace("{}{}\n=========================\n{}\n=========================\n", logPrefix, request, requestBodyContent);
 			    Response response = chain.proceed(request);
 			    if (!response.isSuccessful()) {
-				    logger.warn("{}{} {} {}", logPrefix, response, response.headers(), response.peekBody(10000).string());
+				    logger.warn("{}{}\n{}\n=========================\n{}\n=========================\n", logPrefix, response, response.headers(), response.peekBody(10000).string());
 			    }
 			    else {
 			    	// TBEERNOT logger.trace("{}{} {}", logPrefix, response, response.peekBody(10000).string());			    	
-				    logger.trace("{}{} {} {}", logPrefix, response, response.headers(), response.peekBody(200).string());			    	
+				    logger.trace("{}{}\n{}\n=========================\n{}\n=========================\n", logPrefix, response, response.headers(), response.peekBody(200).string());			    	
 			    }
 			    return response;
 			})
