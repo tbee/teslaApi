@@ -103,7 +103,12 @@ public class TeslaAPI {
 		cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
 		
 		// Setup the logger
-		HttpLoggingInterceptor logging = new HttpLoggingInterceptor(s -> logger.trace("{}{}", logPrefix, s));
+		HttpLoggingInterceptor logging = new HttpLoggingInterceptor(new okhttp3.logging.HttpLoggingInterceptor.Logger() { // if we do not use a lambda here, the method log output will read "log(", which will make grepping easier is required
+			@Override
+			public void log(String s) {
+				logger.trace("{}{}", logPrefix, s);
+			}
+		});
 		logging.setLevel(Level.BODY);
 		
 		// Initialize the HTTP client
