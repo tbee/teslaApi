@@ -52,7 +52,8 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
-import okio.Buffer;
+import okhttp3.logging.HttpLoggingInterceptor;
+import okhttp3.logging.HttpLoggingInterceptor.Level;
 
 /**
  * A Java implementation of Tesla REST API based on https://www.teslaapi.io/
@@ -101,6 +102,10 @@ public class TeslaAPI {
 		CookieManager cookieManager = new CookieManager();
 		cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
 		
+		// Setup the logger
+		HttpLoggingInterceptor logging = new HttpLoggingInterceptor(s -> logger.trace("{}{}", logPrefix, s));
+		logging.setLevel(Level.BODY);
+		
 		// Initialize the HTTP client
 		okHttpClient = new OkHttpClient.Builder()
 			.protocols(Arrays.asList(Protocol.HTTP_2, Protocol.HTTP_1_1))
@@ -108,25 +113,7 @@ public class TeslaAPI {
 	        .writeTimeout(30, TimeUnit.SECONDS)
 	        .readTimeout(2, TimeUnit.MINUTES)
 	        .cookieJar(new JavaNetCookieJar(cookieManager))
-	        .addNetworkInterceptor(chain -> {
-	        	Request request = chain.request();
-	        	String requestBodyContent = "";
-	        	if (request.body() != null) {
-	                Buffer buffer = new Buffer();
-	                request.newBuilder().build().body().writeTo(buffer); // create a copy request and use that to write the body
-	                requestBodyContent = buffer.readUtf8();
-	        	}
-			    logger.trace("{}{}\n=========================\n{}\n=========================\n", logPrefix, request, requestBodyContent);
-			    Response response = chain.proceed(request);
-			    if (!response.isSuccessful()) {
-				    logger.warn("{}{}\n{}\n=========================\n{}\n=========================\n", logPrefix, response, response.headers(), response.peekBody(10000).string());
-			    }
-			    else {
-			    	// TBEERNOT logger.trace("{}{} {}", logPrefix, response, response.peekBody(10000).string());			    	
-				    logger.trace("{}{}\n{}\n=========================\n{}\n=========================\n", logPrefix, response, response.headers(), response.peekBody(200).string());			    	
-			    }
-			    return response;
-			})
+	        .addNetworkInterceptor(logging)
 	        .build();
 	}
 
