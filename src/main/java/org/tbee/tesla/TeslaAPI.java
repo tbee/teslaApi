@@ -108,7 +108,7 @@ public class TeslaAPI {
 	        .writeTimeout(30, TimeUnit.SECONDS)
 	        .readTimeout(2, TimeUnit.MINUTES)
 	        .cookieJar(new JavaNetCookieJar(cookieManager))
-	        .addInterceptor(chain -> {
+	        .addNetworkInterceptor(chain -> {
 	        	Request request = chain.request();
 	        	String requestBodyContent = "";
 	        	if (request.body() != null) {
@@ -116,14 +116,14 @@ public class TeslaAPI {
 	                request.newBuilder().build().body().writeTo(buffer); // create a copy request and use that to write the body
 	                requestBodyContent = buffer.readUtf8();
 	        	}
-			    logger.trace("{}{} {}", logPrefix, request, requestBodyContent);
+			    logger.trace("{}{} {} {}", logPrefix, request, request.headers(), requestBodyContent);
 			    Response response = chain.proceed(request);
 			    if (!response.isSuccessful()) {
-				    logger.warn("{}{} {}", logPrefix, response, response.peekBody(10000).string());
+				    logger.warn("{}{} {} {}", logPrefix, response, response.headers(), response.peekBody(10000).string());
 			    }
 			    else {
 			    	// TBEERNOT logger.trace("{}{} {}", logPrefix, response, response.peekBody(10000).string());			    	
-				    logger.trace("{}{} {}", logPrefix, response, response.peekBody(200).string());			    	
+				    logger.trace("{}{} {} {}", logPrefix, response, response.headers(), response.peekBody(200).string());			    	
 			    }
 			    return response;
 			})
