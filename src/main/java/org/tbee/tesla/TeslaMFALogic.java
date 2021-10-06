@@ -184,7 +184,25 @@ class TeslaMFALogic {
 	    Request request = new Request.Builder()
 	            .url(authorizeURL)
 	            .post(formBuilder.build())
-	            .build();
+//	            // TBEERNOT all headers copied from webbrowser
+//	            .addHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+//	        	.addHeader("Accept-Encoding", "gzip, deflate, br")
+//	        	.addHeader("Accept-Language", "en-US,en;q=0.5")
+//	        	.addHeader("Connection", "keep-alive")
+//	        	.addHeader("Content-Length", "157")
+//	        	.addHeader("Content-Type", "application/x-www-form-urlencoded")
+//	        	// handled by okhttp: .addHeader("Cookie", "_ga_KFP8T9JWYJ=GS1.1.1626536715.2.1.1626536790.0; _ga=GA1.2.839819551.1620560363; _abck=9FA9EEF1E8E6513E3DDA553019C710E0~0~YAAQDKQFF6wpetN7AQAA/+FY2wYg5EeVKSfJVbRwWeiVSClG9O/L+bzos0Ju+MFgdVZxrvrk0OJVmsrlL3UtwRUlcoeGTTYvtF+j0SBSko7zMpMmerS30FNGQ5XYhsAxwuyXdkoUML+HjMw1HSMAb82xkqylhmNomHHrzoE7paxhHyY88SgIdusQcObIEe5LFvVoTnWBK5H7IP/qeUXwskHBb+XrkiuV6LG8YfMFjrfUSMPyAJOQJRLNVl0Go7YiKjMhNyjaWunVEIXNwv7sSn0iTylsndEc1jkLkEHP7mXTn58gVzBMRW11g0zBCnJ5fHdwdKqrWTyHKzNVOYpuj9CmiC6piNp3581GWbQCiGJAWaDyxFL2jDgdQHDNGtgckNcou…28L2ShHx9afF6W2DZ/VG6xAetOcrkq2lwW6UwWngNoA0mCK1C1zPNd5ZSY74fKIOA04Qa4D+tj5VWPIOH5Nf2rr/fYfS1o1XZ9FLCHUUaBBB7ugUopv/hbHX+4EGtQyV/0oYZyw2aUi28YFzu0Yw1fnWRYHGZ04eMEMnhkLdsTw1Qn8TgIMiQqHGdiub9BqZ/47dy86oYO/AjXOnD1/o4LnyxJxPknR124o2QpzeM/mm4H7FQqAEbhPAqXimfIQPXiSiipGMNIxjbg==~3556933~3229249; AKA_A2=A; bm_sv=24A8C49300B77490D65D84FBC9335FF0~HcTy6fvR4hBy3zakV4rHln6Pj9SL/z0Dh1muNogCwks8M6dE5xcTOiVukb9/oZNjTLSCPuigEw18mxUp0Ly2jf0ZQ5Tnx4Ac3hoChNjXcVAtAj50Nn+xkduztoL5o9fv2RxeCaRIBWw8MNosC8tQ0OrBnZDReUnvLV7fQLHbMU0=")
+//	        	.addHeader("Host", "auth.tesla.com")
+//	        	.addHeader("Origin", "https://auth.tesla.com")
+//	        	.addHeader("Referer", "https://auth.tesla.com/oauth2/v1/authorize?redirect_uri=https://www.tesla.com/teslaaccount/owner-xp/auth/callback&response_type=code&client_id=ownership&scope=offline_access%20openid%20ou_code%20email&audience=https%3A%2F%2Fownership.tesla.com%2F&locale=nl-nl")
+//	        	.addHeader("Sec-Fetch-Dest", "document")
+//	        	.addHeader("Sec-Fetch-Mode", "navigate")
+//	        	.addHeader("Sec-Fetch-Site", "same-origin")
+//	        	.addHeader("Sec-Fetch-User", "?1")
+//	        	.addHeader("TE", "trailers")
+//	        	.addHeader("Upgrade-Insecure-Requests", "1")
+//	        	.addHeader("User-Agent", "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:92.0) Gecko/20100101 Firefox/92.0")
+	        	.build();
 		try (
 			Response response = okHttpClient.newCall(request).execute();
 			ResponseBody responseBody = response.body();
@@ -202,17 +220,32 @@ class TeslaMFALogic {
 			    .scheme("https")
 			    .host("auth.tesla.com")
 			    .addPathSegment("oauth2")
-			    .addPathSegment("v1")
+			    .addPathSegment("v1") // v3 does not make a difference
 			    .addPathSegment("authorize")
 			    .addPathSegment("mfa")
 			    .addPathSegment("factors")
 			    .addQueryParameter("transaction_id", transactionId)
-			    .build();
+			    .build();				
 
 	    // do a get
 	    Request request = new Request.Builder()
 	    		.get()
 	            .url(url)
+//	            // TBEERNOT all headers copied from webbrowser
+//			    .addHeader("Accept", "application/json")
+//	    		.addHeader("Accept-Encoding", "gzip, deflate, br")
+//	    		.addHeader("Accept-Language", "en-US,en;q=0.5")
+//	    		.addHeader("Connection" ,"keep-alive")
+//	    		.addHeader("Content-Type", "application/json;charset=UTF-8")
+//				// handled by okhttp: .addHeader("Cookie", "_ga_KFP8T9JWYJ=GS1.1.1626536715.2.1.1626536790.0; _ga=GA1.2.839819551.1620560363; _abck=9FA9EEF1E8E6513E3DDA553019C710E0~0~YAAQDKQFF0lPetN7AQAAIBFb2wbKi1GeSUqduNwMRTuxNKnBpiR29IGWo6pdTohRL71cwgmzib/LbGKrretaBqp7WnBWj8amDFyYs93ADtNiR5SM/8FM9Iyf6Ze2DlhSPJnhxiKwlwc7MRlkLaFZZnNV+wbIQC7mZ70/qYp3ZGWv2zTrhQ3798S5+Dea1fdQ00ieOoztYagelfM/FYewS39x+1Wb0ZM8PnEB/Mhpy1wIISG0j6iU0A6f8UeMk4uIBr/oBVfYVuYeYXnEdIVpEHVKN9R5z/P3OtlSXz0r8o/l83melSIDkMLyz590osCIE3raffovjO9cdU7+s5OEbd4uZchLINOz3h2ifk5+sGEvy8AMIXdgQ69NU4ZZyzRyO6vLU…28L2ShHx9afF6W2DZ/VG6xAetOcrkq2lwW6UwWngNoA0mCK1C1zPNd5ZSY74fKIOA04Qa4D+tj5VWPIOH5Nf2rr/fYfS1o1XZ9FLCHUUaBBB7ugUopv/hbHX+4EGtQyV/0oYZyw2aUi28YFzu0Yw1fnWRYHGZ04eMEMnhkLdsTw1Qn8TgIMiQqHGdiub9BqZ/47dy86oYO/AjXOnD1/o4LnyxJxPknR124o2QpzeM/mm4H7FQqAEbhPAqXimfIQPXiSiipGMNIxjbg==~3556933~3229249; AKA_A2=A; bm_sv=24A8C49300B77490D65D84FBC9335FF0~HcTy6fvR4hBy3zakV4rHln6Pj9SL/z0Dh1muNogCwks8M6dE5xcTOiVukb9/oZNjTLSCPuigEw18mxUp0Ly2jf0ZQ5Tnx4Ac3hoChNjXcVDswU8PkKt/fvgH+IP4aWQ428Pmqsj/sJwr4HZcvEOYW5mN+wKlsuof3TshCljM95w=")
+//				.addHeader("Host", "auth.tesla.com")
+//				.addHeader("Referer", "https://auth.tesla.com/oauth2/v1/authorize?redirect_uri=https://www.tesla.com/teslaaccount/owner-xp/auth/callback&response_type=code&client_id=ownership&scope=offline_access%20openid%20ou_code%20email&audience=https%3A%2F%2Fownership.tesla.com%2F&locale=nl-nl")
+//				.addHeader("Sec-Fetch-Dest", "empty")
+//				.addHeader("Sec-Fetch-Mode", "cors")
+//				.addHeader("Sec-Fetch-Site", "same-origin")
+//				.addHeader("TE", "trailers")
+//				.addHeader("User-Agent", "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:92.0) Gecko/20100101 Firefox/92.0")
+//				.addHeader("X-Requested-With", "XMLHttpRequest")
 	            .build();
 		try (
 			Response response = okHttpClient.newCall(request).execute();

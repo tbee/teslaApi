@@ -103,7 +103,7 @@ public class TeslaAPI {
 		cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
 		
 		// Setup the logger
-		HttpLoggingInterceptor logging = new HttpLoggingInterceptor(new okhttp3.logging.HttpLoggingInterceptor.Logger() { // if we do not use a lambda here, the method log output will read "log(", which will make grepping easier is required
+		HttpLoggingInterceptor logging = new HttpLoggingInterceptor(new okhttp3.logging.HttpLoggingInterceptor.Logger() { // if we do not use a lambda here, the method log output will read "log(", which will make grepping easier if required
 			@Override
 			public void log(String s) {
 				logger.trace("{}{}", logPrefix, s);
@@ -146,7 +146,8 @@ public class TeslaAPI {
 	 * @return 
 	 */
 	public Tokens login(String username, String password, String passcode) {
-        Tokens tokens = new TeslaMFALogic(okHttpClient, logPrefix).login(username, password, passcode);
+//        Tokens tokens = new TeslaMFALogic(okHttpClient, logPrefix).login(username, password, passcode);
+        Tokens tokens = new TeslaMFALogicViaSelenium(okHttpClient, logPrefix).login(username, password, passcode);
 		setTokens(tokens);
 		return tokens;
 	}
