@@ -146,8 +146,7 @@ public class TeslaAPI {
 	 * @return 
 	 */
 	public Tokens login(String username, String password, String passcode) {
-//        Tokens tokens = new TeslaMFALogic(okHttpClient, logPrefix).login(username, password, passcode);
-        Tokens tokens = new TeslaMFALogicViaSelenium(okHttpClient, logPrefix).login(username, password, passcode);
+        Tokens tokens = new TeslaMFALogic(okHttpClient, logPrefix).login(username, password, passcode);
 		setTokens(tokens);
 		return tokens;
 	}
