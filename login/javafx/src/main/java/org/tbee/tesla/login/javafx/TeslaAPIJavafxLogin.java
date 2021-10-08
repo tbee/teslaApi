@@ -21,21 +21,33 @@ package org.tbee.tesla.login.javafx;
  */
 
 import javafx.application.Application;
+import javafx.concurrent.Worker;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
+import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 
 public class TeslaAPIJavafxLogin extends Application {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) {    	
         launch();
     }
 
     @Override
     public void start(Stage stage) {
-    	WebView webView = new WebView();
-    	webView.getEngine().load("http://tesla.com");
+    	
+//        new SimpleProxyServer().runServer("tesla.com", 80, 8080);
+//        new SimpleProxyServer().runServer("tesla.com", 443, 8443); // no use doing this for https, it's encrypted
+				
+    	WebView webView = new WebView();    	
+    	WebEngine engine = webView.getEngine();
+    	engine.getLoadWorker().stateProperty().addListener((obs, oldState, newState) -> {
+            if (newState == Worker.State.SUCCEEDED) {
+                System.out.println("SUCCEEDED Location="  + engine.getLocation());
+            }
+        });
+		engine.load("https://tesla.com");
         Scene scene = new Scene(new StackPane(webView), 1600, 1200);
         stage.setScene(scene);
         stage.show();

@@ -54,7 +54,8 @@
 				<configuration>
 					<mainClass>org.tbee.tesla.login.javafx.TeslaAPIJavafxLogin</mainClass>
 					<options>
-						<option>-Djdk.gtk.version=2</option> <!-- https://bugs.openjdk.java.net/browse/JDK-8215104 -->
+						<option>-Xdebug</option>
+						<option>-Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=8000</option>
 					</options>
 				</configuration>
 			</plugin>
