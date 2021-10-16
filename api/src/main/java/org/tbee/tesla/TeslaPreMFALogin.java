@@ -39,8 +39,8 @@ import okhttp3.ResponseBody;
 /**
  * The MFA based login flow
  */
-class TeslaPreMFALogic {
-	static final Logger logger = LoggerFactory.getLogger(TeslaPreMFALogic.class);
+class TeslaPreMFALogin {
+	static final Logger logger = LoggerFactory.getLogger(TeslaPreMFALogin.class);
 	
 	// For HTTP
 	private final Gson gson = new Gson();
@@ -50,13 +50,16 @@ class TeslaPreMFALogic {
 	// For improved logging 
 	private final String logPrefix;
 
+	private final TeslaLoginHelper helper;	
+
 	
 	/**
 	 * 
 	 */
-	TeslaPreMFALogic(OkHttpClient okHttpClient, String logPrefix) {
+	TeslaPreMFALogin(OkHttpClient okHttpClient, String logPrefix) {
 		this.okHttpClient = okHttpClient;
 		this.logPrefix = logPrefix;
+		this.helper = new TeslaLoginHelper(okHttpClient, logPrefix);
 	}
 	
 	            
@@ -82,8 +85,8 @@ class TeslaPreMFALogic {
 	 */
 	private Tokens fetchTokens(JsonObject requestJsonObject) {
         try {
-            requestJsonObject.addProperty("client_id", TeslaMFALogic.CLIENT_ID);
-            requestJsonObject.addProperty("client_secret", TeslaMFALogic.CLIENT_SECRET);
+            requestJsonObject.addProperty("client_id", helper.CLIENT_ID);
+            requestJsonObject.addProperty("client_secret", helper.CLIENT_SECRET);
             String requestBody = gson.toJson(requestJsonObject);
 
             // Call the REST service
@@ -102,7 +105,7 @@ class TeslaPreMFALogic {
 				// Parse the result and remember the two tokens
 				String responseBodyContent = responseBody.string();
 				JsonObject responseJsonObject = gson.fromJson(responseBodyContent, JsonObject.class);
-				Tokens tokens = TeslaMFALogic.createTokensFromJsonObject(responseJsonObject);
+				Tokens tokens = helper.createTokensFromJsonObject(responseJsonObject);
 				return tokens;
 			}
         } 

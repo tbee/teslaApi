@@ -45,11 +45,9 @@ public class TestHappyFlow {
 		// login
 		System.out.println("login");
 		Scanner scanner = new Scanner(System.in);
-		System.out.println("passcode ('-' to skip MFA):");
-		String passcode = scanner.next();
-		Tokens tokens = ("-".equals(passcode.trim()) 
-				? teslaAPI.login(TESLA_USERNAME, TESLA_PASSWORD)             // without MFA
-				: teslaAPI.login(TESLA_USERNAME, TESLA_PASSWORD, passcode)); // with MFA
+		System.out.println("authorization code:");
+		String authorizationCode = scanner.next();
+		Tokens tokens = teslaAPI.login(authorizationCode);
 		Assert.assertNotNull(tokens);
 		Assert.assertNotNull(tokens.accessToken);
 		Assert.assertNotNull(tokens.refreshToken);

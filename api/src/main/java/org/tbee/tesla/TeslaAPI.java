@@ -138,15 +138,28 @@ public class TeslaAPI {
 	
 	            
 	/**
-	 * This login only fetches and remembers the access and refresh tokens needed for further actions.
+	 * This semi-login only fetches and remembers the access and refresh tokens needed for further actions.
 	 * You may also set these manually using setTokens
-	 * @param username
-	 * @param password
-	 * @param passcode
+	 * In order to obtain the authorizationCode the user needs to complete the whole login process and extra the authorizationCode from the double redirects in the web browser flow.
+	 * @param authorizationCode
 	 * @return 
 	 */
+	public Tokens login(String authorizationCode) {
+        Tokens tokens = new TeslaAuthLogin(okHttpClient, logPrefix).login(authorizationCode);
+		setTokens(tokens);
+		return tokens;
+	}
+    
+	/**
+	* This login only fetches and remembers the access and refresh tokens needed for further actions.
+	* You may also set these manually using setTokens
+	* @param username
+	* @param password
+	* @param passcode
+	* @return 
+	*/
 	public Tokens login(String username, String password, String passcode) {
-        Tokens tokens = new TeslaMFALogic(okHttpClient, logPrefix).login(username, password, passcode);
+		Tokens tokens = new TeslaMFALogin(okHttpClient, logPrefix).login(username, password, passcode);
 		setTokens(tokens);
 		return tokens;
 	}
@@ -160,7 +173,7 @@ public class TeslaAPI {
 	 * @return 
 	 */
 	public Tokens login(String username, String password) {
-        Tokens tokens = new TeslaNoMFALogic(okHttpClient, logPrefix).login(username, password);
+        Tokens tokens = new TeslaNoMFALogin(okHttpClient, logPrefix).login(username, password);
 		setTokens(tokens);
 		return tokens;
 	}
@@ -170,7 +183,7 @@ public class TeslaAPI {
 	 * @return 
 	 */
 	public Tokens refreshTokens() {
-		Tokens tokens = new TeslaMFALogic(okHttpClient, logPrefix).refreshTokens(this.tokens);
+		Tokens tokens = new TeslaLoginHelper(okHttpClient, logPrefix).refreshTokens(this.tokens);
 		setTokens(tokens);
 		return tokens;
 	}

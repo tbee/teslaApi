@@ -21,14 +21,10 @@ package org.tbee.tesla;
  */
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,7 +32,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.tbee.tesla.dto.Tokens;
 
-import com.google.common.hash.Hashing;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
@@ -53,12 +48,9 @@ import okhttp3.ResponseBody;
 /**
  * The MFA based login flow
  */
-class TeslaMFALogic {
-	static final Logger logger = LoggerFactory.getLogger(TeslaMFALogic.class);
+class TeslaMFALogin {
+	static final Logger logger = LoggerFactory.getLogger(TeslaMFALogin.class);
 	
-	static final String CLIENT_SECRET = "c7257eb71a564034f9419ee651c7d0e5f7aa6bfbd18bafb5c5c033b093bb2fa3";
-	static final String CLIENT_ID = "81527cff06843c8634fdc09e8ac0abefb46ac849f38fe1e431c2ef2106796384";	
-
     // For HTTP
 	private final Gson gson = new Gson();
 	private final OkHttpClient okHttpClient;
@@ -67,13 +59,15 @@ class TeslaMFALogic {
 	// For improved logging 
 	private final String logPrefix;
 
+	private final TeslaLoginHelper helper;
 	
 	/**
 	 * 
 	 */
-	TeslaMFALogic(OkHttpClient okHttpClient, String logPrefix) {
+	TeslaMFALogin(OkHttpClient okHttpClient, String logPrefix) {
 		this.okHttpClient = okHttpClient;
 		this.logPrefix = logPrefix;
+		this.helper = new TeslaLoginHelper(okHttpClient, logPrefix);
 	}
 	
 	            
@@ -86,8 +80,8 @@ class TeslaMFALogic {
         
         try {
         	// construct the login page URL (it is used 3 times)
-    		String codeVerifier = generateCodeVerifier();
-            String codeChallenge = computeChallenge(codeVerifier);
+    		String codeVerifier = helper.generateCodeVerifier();
+            String codeChallenge = helper.computeChallenge(codeVerifier);
         	HttpUrl authorizeUrl = new HttpUrl.Builder()
         		    .scheme("https")
         		    .host("auth.tesla.com")
@@ -137,7 +131,7 @@ class TeslaMFALogic {
 			Response response = okHttpClient.newCall(request).execute();
 			ResponseBody responseBody = response.body();
 		) {
-			failIfNotSuccesful(response);
+			helper.failIfNotSuccesful(response);
 			String content = responseBody.string();
 			
 			// find all hidden inputs
@@ -207,7 +201,7 @@ class TeslaMFALogic {
 			Response response = okHttpClient.newCall(request).execute();
 			ResponseBody responseBody = response.body();
 		) {
-			failIfNotSuccesful(response);
+			helper.failIfNotSuccesful(response);
 		}	
 	}
 
@@ -252,10 +246,10 @@ class TeslaMFALogic {
 			ResponseBody responseBody = response.body();
 		) {			
 			// get the content as JSON
-			failIfNotSuccesful(response);
+			helper.failIfNotSuccesful(response);
 			String content = responseBody.string();			
 			JsonObject responseJsonObject = gson.fromJson(content, JsonObject.class);
-			failOnError(responseJsonObject);
+			helper.failOnError(responseJsonObject);
 		
 			// Extract the factor ids
 			List<String> factorIds = new ArrayList<>();
@@ -305,11 +299,11 @@ class TeslaMFALogic {
 				Response response = okHttpClient.newCall(request).execute();
 				ResponseBody responseBody = response.body();
 			) {
-				failIfNotSuccesful(response);
+				helper.failIfNotSuccesful(response);
 				String content = responseBody.string();
 				
 				JsonObject responseJsonObject = gson.fromJson(content, JsonObject.class);
-				failOnError(responseJsonObject);
+				helper.failOnError(responseJsonObject);
 				boolean approved = responseJsonObject.getAsJsonObject("data").get("approved").getAsBoolean();
 				logger.trace("{}approved={}", logPrefix, approved);	
 				boolean valid = responseJsonObject.getAsJsonObject("data").get("valid").getAsBoolean();
@@ -386,12 +380,12 @@ class TeslaMFALogic {
 			Response response = okHttpClient.newCall(request).execute();
 			ResponseBody responseBody = response.body();
 		) {
-			failIfNotSuccesful(response);
+			helper.failIfNotSuccesful(response);
 			String content = responseBody.string();
 			
 			JsonObject responseJsonObject = gson.fromJson(content, JsonObject.class);
-			failOnError(responseJsonObject);
-			Tokens tokens = createTokensFromJsonObject(responseJsonObject);
+			helper.failOnError(responseJsonObject);
+			Tokens tokens = helper.createTokensFromJsonObject(responseJsonObject);
 			logger.trace("{}oauthTokens={}", logPrefix, tokens);
 			return tokens;
 		}
@@ -412,8 +406,8 @@ class TeslaMFALogic {
 			// request body is JSON
 		    JsonObject requestJsonObject = new JsonObject();
 		    requestJsonObject.addProperty("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer");
-		    requestJsonObject.addProperty("client_id", CLIENT_ID);
-		    requestJsonObject.addProperty("client_secret", CLIENT_SECRET);
+		    requestJsonObject.addProperty("client_id", helper.CLIENT_ID);
+		    requestJsonObject.addProperty("client_secret", helper.CLIENT_SECRET);
 		    
 		    // post the form
 		    Request request = new Request.Builder()
@@ -425,133 +419,14 @@ class TeslaMFALogic {
 				Response response = okHttpClient.newCall(request).execute();
 				ResponseBody responseBody = response.body();
 			) {
-				failIfNotSuccesful(response);
+				helper.failIfNotSuccesful(response);
 				String content = responseBody.string();
 				
 				JsonObject responseJsonObject = gson.fromJson(content, JsonObject.class);
-				tokens = createTokensFromJsonObject(responseJsonObject);
+				tokens = helper.createTokensFromJsonObject(responseJsonObject);
 			}
 		}
 		return tokens;
 	}
 	
-	/* */
-	static void failIfNotSuccesful(Response response) {
-		if (!response.isSuccessful()) {
-			throw new RuntimeException("Request not succesful: "  + response);
-		}
-	}
-
-	/* */
-	static void failOnError(JsonObject jsonObject) {
-		JsonObject errorJsonObject = jsonObject.getAsJsonObject("error");
-		if (errorJsonObject == null) {
-			return;
-		}
-		String message = errorJsonObject.get("message").getAsString();
-		if (message == null) {
-			return;
-		}
-		throw new RuntimeException(message);
-	}
-	
-	/* */
-	static String generateCodeVerifier() {
-		
-		// random 43-128 long string, no idea yet what this is used for
-		String base = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-		StringBuffer stringBuffer = new StringBuffer();
-		Random random = new Random();
-		for (int i = 0; i < 86; i++) {
-			int idx = random.nextInt(base.length());
-			stringBuffer.append(base.substring(idx, idx + 1));
-		}
-		String key = stringBuffer.toString();
-		String encoded = encodeMFABase64(key);
-        return encoded;
-    }
-	
-	/* */
-	static String computeChallenge(String verifier) {
-		String hash = Hashing.sha256()
-				  .hashString(verifier, StandardCharsets.UTF_8)
-				  .toString();
-		String encoded = encodeMFABase64(hash);
-        return encoded;
-    }
-	
-	/* */
-	static String encodeMFABase64(String s) {
-		String encoded = Base64.getEncoder().encodeToString(s.getBytes());
-		encoded = encoded
-	            .replace("+", "-")
-	            .replace("/", "_")
-	            .replace("=", "")
-	            .trim();
-		return encoded;
-	}
-	
-	/**
-	 * This method fetches (and remembers/replaces) new access and refresh tokens
-	 * @return 
-	 */
-	Tokens refreshTokens(Tokens oldTokens) {
-		
-		// url to fetch token from
-		HttpUrl url = new HttpUrl.Builder()
-			    .scheme("https")
-			    .host("auth.tesla.com")
-			    .addPathSegment("oauth2")
-			    .addPathSegment("v1")
-			    .addPathSegment("token")
-			    .build();
-
-		// request body is JSON
-	    JsonObject requestJsonObject = new JsonObject();
-	    requestJsonObject.addProperty("grant_type", "refresh_token");
-        requestJsonObject.addProperty("refresh_token", oldTokens.refreshToken);
-	    requestJsonObject.addProperty("client_id", "ownerapi");
-	    
-	    // post the form
-	    Request request = new Request.Builder()
-	            .url(url)
-	            .post(RequestBody.create(gson.toJson(requestJsonObject), JsonMediaType))
-	            .build();
-		try (
-			Response response = okHttpClient.newCall(request).execute();
-			ResponseBody responseBody = response.body();
-		) {
-			failIfNotSuccesful(response);
-			String content = responseBody.string();
-			
-			JsonObject responseJsonObject = gson.fromJson(content, JsonObject.class);
-			failOnError(responseJsonObject);
-			Tokens newTokens = createTokensFromJsonObject(responseJsonObject);
-			logger.trace("{}apiTokens={}", logPrefix, oldTokens);
-			
-			// you don't get a new refresh token, so we need to use the old one
-			newTokens = new Tokens(newTokens.accessToken, oldTokens.refreshToken, newTokens.expiresAt, newTokens.expiresIn);
-			
-			return newTokens;
-		}
-        catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-	}
-	
-	/* */
-	static Tokens createTokensFromJsonObject(JsonObject jsonObject) {
-		String accessToken = jsonObject.get("access_token").getAsString();
-		String refreshToken = null;
-		if (jsonObject.get("refresh_token") != null) {
-			refreshToken = jsonObject.get("refresh_token").getAsString();
-		}
-		Instant createdAt = Instant.now();
-		if (jsonObject.get("created_at") != null) {
-			long createdAtValue = jsonObject.get("created_at").getAsLong();
-			createdAt = Instant.ofEpochSecond(createdAtValue);
-		}
-		long expiresIn = jsonObject.get("expires_in").getAsLong();
-		return new Tokens(accessToken, refreshToken, createdAt, expiresIn);		
-	}
 }

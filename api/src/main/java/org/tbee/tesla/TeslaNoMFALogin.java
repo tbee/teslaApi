@@ -45,12 +45,9 @@ import okhttp3.ResponseBody;
 /**
  * The MFA based login flow
  */
-class TeslaNoMFALogic {
-	static final Logger logger = LoggerFactory.getLogger(TeslaNoMFALogic.class);
+class TeslaNoMFALogin {
+	static final Logger logger = LoggerFactory.getLogger(TeslaNoMFALogin.class);
 	
-	static final String CLIENT_SECRET = "c7257eb71a564034f9419ee651c7d0e5f7aa6bfbd18bafb5c5c033b093bb2fa3";
-	static final String CLIENT_ID = "81527cff06843c8634fdc09e8ac0abefb46ac849f38fe1e431c2ef2106796384";	
-
     // For HTTP
 	private final Gson gson = new Gson();
 	private final OkHttpClient okHttpClient;
@@ -59,13 +56,15 @@ class TeslaNoMFALogic {
 	// For improved logging 
 	private final String logPrefix;
 
+	private final TeslaLoginHelper helper;	
 	
 	/**
 	 * 
 	 */
-	TeslaNoMFALogic(OkHttpClient okHttpClient, String logPrefix) {
+	TeslaNoMFALogin(OkHttpClient okHttpClient, String logPrefix) {
 		this.okHttpClient = okHttpClient;
 		this.logPrefix = logPrefix;
+		this.helper = new TeslaLoginHelper(okHttpClient, logPrefix);
 	}
 	
 	            
@@ -79,7 +78,7 @@ class TeslaNoMFALogic {
         try {
         	// construct URL making sure any encoding is done right
         	// https://auth.tesla.com/oauth2/v3/authorize?client_id=... 
-    		String codeVerifier = TeslaMFALogic.generateCodeVerifier();
+    		String codeVerifier = helper.generateCodeVerifier();
         	HttpUrl authorizeUrl = new HttpUrl.Builder() 
         		    .scheme("https")
         		    .host("auth.tesla.com")
@@ -94,10 +93,10 @@ class TeslaNoMFALogic {
         		    .build();
         	
         	// This is Tesla's MFA process
-			Map<String, String> loginHiddenFields = processMFALoginPage(authorizeUrl);
-			String authorizationCode = attemptMFALogin(username, password, authorizeUrl, loginHiddenFields);
-			Tokens oauthTokens = obtainMFAOAuthTokens(codeVerifier, authorizationCode);
-			Tokens apiTokens = obtainAPITokensUsingMFA(oauthTokens.accessToken);
+			Map<String, String> loginHiddenFields = processLoginPage(authorizeUrl);
+			String authorizationCode = attemptLogin(username, password, authorizeUrl, loginHiddenFields);
+			Tokens oauthTokens = obtainAuthTokens(codeVerifier, authorizationCode);
+			Tokens apiTokens = obtainAPITokensUsing(oauthTokens.accessToken);
 			
 			// we need to oauthToken to do the refresh of the api accesstoken
 			apiTokens = new Tokens(apiTokens.accessToken, oauthTokens.refreshToken, apiTokens.createdAt, apiTokens.expiresIn);
@@ -110,7 +109,7 @@ class TeslaNoMFALogic {
 	}
 
 	/* */
-	private Map<String, String> processMFALoginPage(HttpUrl authorizeURL) throws IOException {
+	private Map<String, String> processLoginPage(HttpUrl authorizeURL) throws IOException {
 		Request request = new Request.Builder()
 	            .url(authorizeURL)
 	            .get()
@@ -119,7 +118,7 @@ class TeslaNoMFALogic {
 			Response response = okHttpClient.newCall(request).execute();
 			ResponseBody responseBody = response.body();
 		) {
-			TeslaMFALogic.failIfNotSuccesful(response);
+			helper.failIfNotSuccesful(response);
 			String content = responseBody.string();
 
 			// find all hidden inputs
@@ -150,7 +149,7 @@ class TeslaNoMFALogic {
 	}
 
 	/* */
-	private String attemptMFALogin(String username, String password, HttpUrl authorizeURL, Map<String, String> loginHiddenFields) 
+	private String attemptLogin(String username, String password, HttpUrl authorizeURL, Map<String, String> loginHiddenFields) 
 	throws IOException {
 		
 		// This time the client should not follow redirects, because we need the location of the redirect
@@ -184,7 +183,7 @@ class TeslaNoMFALogic {
 	}
 
 	/* */
-	private Tokens obtainMFAOAuthTokens(String codeVerifier, String authorizationCode) throws IOException {
+	private Tokens obtainAuthTokens(String codeVerifier, String authorizationCode) throws IOException {
 		// url to fetch token from
 		HttpUrl url = new HttpUrl.Builder()
 			    .scheme("https")
@@ -211,19 +210,19 @@ class TeslaNoMFALogic {
 			Response response = okHttpClient.newCall(request).execute();
 			ResponseBody responseBody = response.body();
 		) {
-			TeslaMFALogic.failIfNotSuccesful(response);
+			helper.failIfNotSuccesful(response);
 			String content = responseBody.string();
 			
 			JsonObject responseJsonObject = gson.fromJson(content, JsonObject.class);
-			TeslaMFALogic.failOnError(responseJsonObject);
-			Tokens tokens = TeslaMFALogic.createTokensFromJsonObject(responseJsonObject);
+			helper.failOnError(responseJsonObject);
+			Tokens tokens = helper.createTokensFromJsonObject(responseJsonObject);
 			logger.trace("{}oauthTokens={}", logPrefix, tokens);
 			return tokens;
 		}
 	}
 
 	/* */
-	private Tokens obtainAPITokensUsingMFA(String shortlivedAccessToken) throws IOException {
+	private Tokens obtainAPITokensUsing(String shortlivedAccessToken) throws IOException {
 		Tokens tokens;
 		{		
 			// url to fetch token from
@@ -237,8 +236,8 @@ class TeslaNoMFALogic {
 			// request body is JSON
 		    JsonObject requestJsonObject = new JsonObject();
 		    requestJsonObject.addProperty("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer");
-		    requestJsonObject.addProperty("client_id", CLIENT_ID);
-//		    requestJsonObject.addProperty("client_secret", CLIENT_SECRET);
+		    requestJsonObject.addProperty("client_id", helper.CLIENT_ID);
+//		    requestJsonObject.addProperty("client_secret", helper.CLIENT_SECRET);
 		    
 		    // post the form
 		    Request request = new Request.Builder()
@@ -253,11 +252,11 @@ class TeslaNoMFALogic {
 				Response response = okHttpClient.newCall(request).execute();
 				ResponseBody responseBody = response.body();
 			) {
-				TeslaMFALogic.failIfNotSuccesful(response);
+				helper.failIfNotSuccesful(response);
 				String content = responseBody.string();
 				
 				JsonObject responseJsonObject = gson.fromJson(content, JsonObject.class);
-				tokens = TeslaMFALogic.createTokensFromJsonObject(responseJsonObject);
+				tokens = helper.createTokensFromJsonObject(responseJsonObject);
 			}
 		}
 		return tokens;
