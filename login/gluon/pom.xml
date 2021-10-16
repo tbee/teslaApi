@@ -5,11 +5,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.tbee.tesla</groupId>
-    <artifactId>teslaAPIMobile</artifactId>
+    <artifactId>teslaAPIFGluonLogin</artifactId>
     <version>1.0.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>TeslaAPIMobile</name>
+    <name>TeslaAPIGluonLogin</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
