@@ -94,8 +94,7 @@ public class MainActivity extends AppCompatActivity {
 
                 // https://www.tesla.com/teslaaccount/owner-xp/auth/callback?code=fb05a21f7ebb35206af2b2337770380326da8992
                 if (url.startsWith("https://www.tesla.com/teslaaccount/owner-xp/auth/callback?code=")) {
-                    Matcher matcher = Pattern.compile("code=([^&]*)&").matcher(url);
-                    String authorizationCode = (matcher.find() ? matcher.group().substring(5).replace("&", "") : "");
+                    String authorizationCode = url.substring("https://www.tesla.com/teslaaccount/owner-xp/auth/callback?code=".length());
                     Log.i("tbeernot", "authorizationCode=" + authorizationCode);
                     authCodeRef.set(authorizationCode);
                 }
