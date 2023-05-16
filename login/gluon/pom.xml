@@ -18,7 +18,7 @@
         <javafx.plugin.version>0.0.7</javafx.plugin.version>
         <gluonfx.plugin.version>1.0.7</gluonfx.plugin.version>
         <charm.version>6.0.6</charm.version>
-        <attach.version>4.0.12</attach.version>
+        <attach.version>4.0.18</attach.version>
         <main.class>org.tbee.tesla.sample.Main</main.class>
     </properties>
 
